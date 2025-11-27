@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generator RPM Kurikulum Merdeka (AI)</title>
+    <!-- Memuat Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Memuat Font Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        /* Dokumen Output Style */
+        #document-output {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2.5rem 3rem;
+            background: white;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+            min-height: 400px;
+        }
+        #document-output:empty::before {
+            content: 'Hasil RPM Anda akan muncul di sini setelah proses selesai.';
+            color: #9ca3af;
+            font-style: italic;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 300px;
+            font-size: 1.125rem;
+        }
+
+        /* Styling Tabel Hasil (Mirip DOCX) */
+        .rpm-layout-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+            font-size: 1rem;
+            line-height: 1.6;
+            border: 1px solid #4b5563;
+        }
+        .rpm-layout-table td {
+            border: 1px solid #4b5563;
+            padding: 0.5rem 0.75rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        .rpm-layout-table .label-col, 
+        .rpm-layout-table .label-col-tahap, 
+        .rpm-layout-table .label-col-prinsip {
+            font-weight: 600;
+        }
+        .rpm-layout-table .label-col { width: 30%; }
+        .rpm-layout-table .label-col-tahap { width: 25%; }
+        .rpm-layout-table .label-col-prinsip { width: 25%; }
+
+        .rpm-layout-table .section-header {
+            background-color: #e5e7eb;
+            font-weight: 700;
+            text-align: left;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #4b5563;
+        }
+        .rpm-layout-table ul, .rpm-layout-table ol {
+            padding-left: 1.5rem;
+            margin-top: 0.25rem;
+            margin-bottom: 0.25rem;
+        }
+
+        /* Tabel Asesmen */
+        .assessment-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+        .assessment-table th, .assessment-table td {
+            border: 1px solid #4b5563;
+            padding: 0.5rem;
+            text-align: left;
+            vertical-align: top;
+        }
+        .assessment-table th {
+            background-color: #f3f4f6;
+            font-weight: 600;
+        }
+
+        /* Tanda Tangan */
+        .signature-block-wrapper { margin-top: 1.5rem; }
+        .signature-date { text-align: right; width: 100%; margin-bottom: 0.5rem; }
+        .signature-block { width: 100%; border-collapse: collapse; }
+        .signature-block td { padding: 0 0.25rem; vertical-align: top; text-align: left; }
+        .signature-block .col-left { width: 45%; }
+        .signature-block .col-spacer { width: 10%; }
+        .signature-block .col-right { width: 45%; }
+        .signature-block .signature-title { font-weight: bold; }
+        .signature-block .signature-space { height: 60px; }
+
+        /* Metadata */
+        .metadata-block { margin-bottom: 1.5rem; line-height: 1.6; }
+        .metadata-block p { margin: 0; padding: 1px 0; }
+        .metadata-block strong { display: inline-block; width: 150px; font-weight: 600; }
+        
+        /* Loading Spinner */
+        #loading-spinner { display: none; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-900 min-h-screen">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-900">Generator RPM Kurikulum Merdeka</h1>
+            <p class="text-gray-600 mt-2">Bantu guru membuat administrasi lebih cepat dengan AI.</p>
+        </div>
+
+        <!-- WARNING / API KEY CONFIG -->
+        <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-8 rounded shadow-sm max-w-4xl mx-auto">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <div class="ml-3 w-full">
+                    <p class="text-sm text-yellow-700 font-bold mb-2">
+                        Kunci API Diperlukan (Gratis dari Google)
+                    </p>
+                    <div class="flex gap-2 items-center">
+                        <input type="password" id="user-api-key" placeholder="Tempel Gemini API Key Anda di sini..." class="flex-1 px-3 py-2 border border-yellow-300 rounded text-sm focus:ring-yellow-500 focus:border-yellow-500">
+                        <button id="save-api-key" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded text-sm font-medium transition">Simpan Kunci</button>
+                    </div>
+                    <p class="text-xs text-yellow-600 mt-2">
+                        *API Key disimpan aman di browser Anda sendiri. Dapatkan key gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline font-bold">Google AI Studio</a>.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Form Input -->
+            <div class="bg-white p-6 rounded-lg shadow-lg border border-gray-200">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+                    <span class="bg-blue-100 text-blue-800 text-sm font-semibold mr-3 px-2.5 py-0.5 rounded">Langkah 1</span> 
+                    Isi Data Pembelajaran
+                </h2>
+                <form id="rpm-form" class="space-y-4">
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Identitas Sekolah -->
+                        <div class="col-span-1 md:col-span-2 bg-gray-50 p-3 rounded border border-gray-200">
+                            <h3 class="font-bold text-gray-700 mb-2 text-sm uppercase">Identitas Sekolah</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">Nama Sekolah</label>
+                                    <input type="text" name="nama_sekolah" class="w-full mt-1 px-3 py-2 border rounded shadow-sm text-sm" placeholder="SD Negeri 1..." required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">Kota & Tanggal TTD</label>
+                                    <input type="text" name="kota_ttd" class="w-full mt-1 px-3 py-2 border rounded shadow-sm text-sm" placeholder="Jakarta, 20 Juli 2025" required>
+                                </div>
+                            </div>
+                        </div>
+
+                         <!-- Identitas Guru & Kepsek -->
+                         <div class="col-span-1 md:col-span-2 bg-gray-50 p-3 rounded border border-gray-200">
+                            <h3 class="font-bold text-gray-700 mb-2 text-sm uppercase">Pendidik & Kepala Sekolah</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">Nama Pendidik</label>
+                                    <input type="text" name="nama_pendidik" class="w-full mt-1 px-3 py-2 border rounded shadow-sm text-sm" required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">NIP Pendidik</label>
+                                    <input type="text" name="nip_pendidik" class="w-full mt-1 px-3 py-2 border rounded shadow-sm text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">Nama Kepala Sekolah</label>
+                                    <input type="text" name="nama_kepala_sekolah" class="w-full mt-1 px-3 py-2 border rounded shadow-sm text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-medium text-gray-600">NIP Kepala Sekolah</label>
+                                    <input type="text" name="nip_kepala_sekolah" class="w-full mt-1 px-3 py-2 border rounded shadow-sm text-sm">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Materi -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Mata Pelajaran</label>
+                            <input type="text" name="mata_pelajaran" class="w-full mt-1 px-3 py-2 border rounded shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Cth: Seni Rupa" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Materi Pokok</label>
+                            <input type="text" name="materi_pokok" class="w-full mt-1 px-3 py-2 border rounded shadow-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Cth: Menggambar Pohon" required>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                             <div>
+                                <label class="block text-sm font-medium text-gray-700">Kelas</label>
+                                <input type="text" name="kelas" class="w-full mt-1 px-3 py-2 border rounded shadow-sm" placeholder="1" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Fase</label>
+                                <select id="fase" name="fase" class="w-full mt-1 px-3 py-2 border rounded shadow-sm" required>
+                                    <option value="A (1-2)">Fase A</option>
+                                    <option value="B (3-4)">Fase B</option>
+                                    <option value="C (5-6)">Fase C</option>
+                                    <option value="D (7-9)">Fase D</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Alokasi Waktu</label>
+                            <input type="text" id="alokasi_waktu" name="alokasi_waktu" class="w-full mt-1 px-3 py-2 border rounded shadow-sm" placeholder="1 x 40 menit" required>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Tahun Ajaran</label>
+                            <input type="text" name="tahun_ajaran" value="2025/2026" class="w-full mt-1 px-3 py-2 border rounded shadow-sm">
+                        </div>
+                    </div>
+
+                    <div class="pt-4 space-y-3">
+                        <button type="submit" id="generate-button" class="w-full flex justify-center items-center px-6 py-3 border border-transparent rounded-lg shadow-md text-white bg-blue-600 hover:bg-blue-700 transition font-medium">
+                            <svg id="loading-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span id="generate-button-text">Buat RPM Sekarang (AI)</span>
+                        </button>
+                        
+                        <div class="flex gap-2">
+                             <button type="button" id="export-word" onclick="exportToWord()" class="flex-1 flex justify-center items-center px-4 py-2 border border-gray-300 rounded shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                                <svg class="w-4 h-4 mr-2 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                Download Word
+                            </button>
+                            <button type="button" id="reset-form" class="flex-1 px-4 py-2 border border-gray-300 rounded shadow-sm text-sm font-medium text-gray-600 bg-white hover:bg-gray-50">
+                                Ulangi
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Output Preview -->
+            <div class="bg-white p-6 rounded-lg shadow-lg border border-gray-200 flex flex-col h-full">
+                <h2 class="text-2xl font-semibold text-gray-800 mb-6 flex items-center">
+                    <span class="bg-green-100 text-green-800 text-sm font-semibold mr-3 px-2.5 py-0.5 rounded">Langkah 2</span> 
+                    Pratinjau & Download
+                </h2>
+                <div id="document-output" class="prose max-w-none flex-grow overflow-auto border rounded p-4 text-sm"></div>
+                <div id="error-message" class="hidden mt-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded"></div>
+            </div>
+        </div>
+        
+        <footer class="mt-12 text-center text-gray-500 text-sm pb-6">
+            <p>&copy; 2025 Generator RPM Guru Cerdas. Dibuat dengan bantuan AI.</p>
+        </footer>
+    </div>
+
+    <script>
+        // === GLOBAL VARIABLES ===
+        let generationData = null;
+        let generationContent = null;
+        const apiKeyInput = document.getElementById('user-api-key');
+        const saveKeyBtn = document.getElementById('save-api-key');
+
+        // === API KEY MANAGEMENT ===
+        // Load key on startup
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedKey = localStorage.getItem('gemini_user_api_key');
+            if (savedKey) {
+                apiKeyInput.value = savedKey;
+                saveKeyBtn.textContent = "Tersimpan!";
+                saveKeyBtn.classList.replace('bg-yellow-500', 'bg-green-600');
+            }
+        });
+
+        // Save key action
+        saveKeyBtn.addEventListener('click', () => {
+            const key = apiKeyInput.value.trim();
+            if (key) {
+                localStorage.setItem('gemini_user_api_key', key);
+                saveKeyBtn.textContent = "Tersimpan!";
+                saveKeyBtn.classList.replace('bg-yellow-500', 'bg-green-600');
+                saveKeyBtn.classList.replace('hover:bg-yellow-600', 'hover:bg-green-700');
+                setTimeout(() => {
+                    saveKeyBtn.textContent = "Simpan Kunci";
+                    saveKeyBtn.classList.replace('bg-green-600', 'bg-yellow-500');
+                    saveKeyBtn.classList.replace('hover:bg-green-700', 'hover:bg-yellow-600');
+                }, 2000);
+            } else {
+                alert("Silakan masukkan API Key terlebih dahulu.");
+            }
+        });
+
+        // === EXPORT FUNCTION ===
+        function exportToWord() {
+            if (!generationData || !generationContent) return;
+            const content = document.getElementById('document-output').innerHTML;
+            const filename = `${generationData.mapel.replace(/[^a-z0-9]/gi, '_')}-${generationData.materi.replace(/[^a-z0-9]/gi, '_')}.doc`;
+
+            const template = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head>
+                    <meta charset='utf-8'><title>Ekspor RPM</title>
+                    <style>
+                        body { font-family: 'Times New Roman', serif; }
+                        .metadata-block { margin-bottom: 20px; font-family: 'Times New Roman'; }
+                        .metadata-block p { margin: 0; }
+                        
+                        table { border-collapse: collapse; width: 100%; font-family: 'Times New Roman'; font-size: 11pt; }
+                        .rpm-layout-table td { border: 1px solid #000; padding: 4px; vertical-align: top; }
+                        .rpm-layout-table .section-header { background-color: #E7E6E6; font-weight: bold; }
+                        .rpm-layout-table .label-col { font-weight: bold; }
+                        
+                        .assessment-table td, .assessment-table th { border: 1px solid #000; padding: 4px; }
+                        .assessment-table th { background-color: #F2F2F2; font-weight: bold; }
+
+                        .signature-block { width: 100%; margin-top: 20px; border: none; }
+                        .signature-block td { border: none; text-align: left; padding: 0; }
+                    </style>
+                </head>
+                <body>${content}</body></html>`;
+
+            const blob = new Blob(['\ufeff', template], { type: 'application/msword' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // === FORM HANDLING ===
+        document.getElementById('rpm-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errorDiv = document.getElementById('error-message');
+            const outputDiv = document.getElementById('document-output');
+            const btn = document.getElementById('generate-button');
+            const spinner = document.getElementById('loading-spinner');
+            const btnText = document.getElementById('generate-button-text');
+            
+            // Validate API Key
+            const apiKey = localStorage.getItem('gemini_user_api_key');
+            if (!apiKey) {
+                alert("Mohon masukkan dan SIMPAN API Key Gemini Anda di kotak kuning bagian atas.");
+                window.scrollTo(0,0);
+                return;
+            }
+
+            // UI Loading State
+            errorDiv.classList.add('hidden');
+            outputDiv.innerHTML = '';
+            btn.disabled = true;
+            spinner.style.display = 'block';
+            btnText.textContent = "Sedang Berpikir...";
+
+            try {
+                const formData = new FormData(e.target);
+                generationData = Object.fromEntries(formData.entries());
+                // Short aliases for simpler code
+                generationData.mapel = generationData.mata_pelajaran;
+                generationData.materi = generationData.materi_pokok;
+                generationData.alokasi = generationData.alokasi_waktu;
+                generationData.pendidik = generationData.nama_pendidik;
+                generationData.sekolah = generationData.nama_sekolah;
+                generationData.nip_kepsek = generationData.nip_kepala_sekolah;
+                generationData.nip_pendidik = generationData.nip_pendidik;
+                generationData.kepala_sekolah = generationData.nama_kepala_sekolah;
+
+                // Call API
+                generationContent = await callGeminiApi(generationData, apiKey);
+                
+                // Render Result
+                outputDiv.innerHTML = buildHtmlOutput(generationData, generationContent);
+                document.getElementById('export-word').disabled = false;
+
+            } catch (err) {
+                errorDiv.textContent = "Gagal: " + err.message + ". Pastikan API Key valid dan koneksi stabil.";
+                errorDiv.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                spinner.style.display = 'none';
+                btnText.textContent = "Buat RPM Sekarang (AI)";
+            }
+        });
+
+        document.getElementById('reset-form').addEventListener('click', () => {
+            document.getElementById('rpm-form').reset();
+            document.getElementById('document-output').innerHTML = '';
+            document.getElementById('export-word').disabled = true;
+            generationData = null;
+        });
+
+        // === API LOGIC ===
+        async function callGeminiApi(data, key) {
+             const systemPrompt = `
+                Anda adalah asisten ahli Kurikulum Merdeka. Buat konten Rencana Pembelajaran Mendalam (RPM) dalam format JSON.
+                Output JSON HARUS mengikuti struktur ini:
+                {
+                    "identifikasi": { "pesertaDidik": "...", "materiPelajaran": "...", "dimensiProfilLulusan": "..." },
+                    "desainPembelajaran": { "capaianPembelajaran": "...", "lintasDisiplinIlmu": "...", "tujuanPembelajaran": ["..."], "topikPembelajaran": "...", "praktikPedagogis": "...", "kemitraanPembelajaran": "...", "lingkunganPembelajaran": "...", "pemanfaatanDigital": "..." },
+                    "pengalamanBelajar": { 
+                        "awal": { "alokasi": "...", "prinsip": "...", "kegiatan": ["..."] },
+                        "inti": { "alokasi": "...", "tahapan": [ { "tahap": "...", "prinsip": "...", "kegiatan": ["..."] } ] },
+                        "penutup": { "alokasi": "...", "prinsip": "...", "kegiatan": ["..."] }
+                    },
+                    "asesmenPembelajaran": {
+                        "awal": { "deskripsi": "...", "rubrik": [ {"aspek": "...", "indikator": "...", "skor_4": "...", "skor_3": "...", "skor_2_1": "..."} ] },
+                        "proses": { "deskripsi": "...", "rubrik": [ {"aspek": "...", "indikator": "...", "skor_4": "...", "skor_3": "...", "skor_2_1": "..."} ] },
+                        "akhir": "..."
+                    }
+                }
+            `;
+            
+            const userPrompt = `Buatkan RPM Mapel: ${data.mapel}, Materi: ${data.materi}, Kelas: ${data.kelas}, Fase: ${data.fase}. Bahasa Indonesia formal.`;
+            
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({
+                    contents: [{ parts: [{ text: userPrompt }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: { responseMimeType: "application/json" }
+                })
+            });
+
+            if (!response.ok) throw new Error("API Error: " + response.status);
+            const result = await response.json();
+            return JSON.parse(result.candidates[0].content.parts[0].text);
+        }
+
+        // === HTML BUILDER (DOCX STYLE) ===
+        function buildHtmlOutput(data, content) {
+            const list = (arr) => `<ul class="list-disc ml-5">${arr.map(i=>`<li>${i}</li>`).join('')}</ul>`;
+            
+            // Helper Tabel Asesmen
+            const tableAsesmen = (rubrik) => {
+                if(!rubrik || !rubrik.length) return '-';
+                return `<table class="assessment-table">
+                    <tr><th>Aspek</th><th>Indikator</th><th>Skor 4 (Sangat Baik)</th><th>Skor 3 (Baik)</th><th>Skor 2-1 (Perlu Bimbingan)</th></tr>
+                    ${rubrik.map(r => `<tr><td>${r.aspek}</td><td>${r.indikator}</td><td>${r.skor_4}</td><td>${r.skor_3}</td><td>${r.skor_2_1}</td></tr>`).join('')}
+                </table>`;
+            };
+
+            // Helper Inti Rows
+            const intiRows = (tahapan) => {
+                return tahapan.map(t => `
+                    <tr>
+                        <td class="label-col-tahap"><strong>${t.tahap}</strong></td>
+                        <td class="label-col-prinsip"><strong>Prinsip: ${t.prinsip}</strong></td>
+                        <td>${list(t.kegiatan)}</td>
+                    </tr>`).join('');
+            };
+
+            return `
+                <div style="font-family: 'Times New Roman', serif;">
+                    <h1 class="text-center text-xl font-bold mb-4 uppercase">Perencanaan Pembelajaran Mendalam</h1>
+                    
+                    <div class="metadata-block text-sm mb-4">
+                        <p><strong>SEKOLAH</strong>: ${data.sekolah}</p>
+                        <p><strong>NAMA PENDIDIK</strong>: ${data.pendidik}</p>
+                        <p><strong>MATA PELAJARAN</strong>: ${data.mapel}</p>
+                        <p><strong>KELAS / FASE</strong>: ${data.kelas} / ${data.fase}</p>
+                        <p><strong>ALOKASI WAKTU</strong>: ${data.alokasi}</p>
+                    </div>
+
+                    <table class="rpm-layout-table text-sm">
+                        <tr><td colspan="3" class="section-header">IDENTIFIKASI</td></tr>
+                        <tr><td class="label-col">Peserta Didik</td><td colspan="2">${content.identifikasi.pesertaDidik}</td></tr>
+                        <tr><td class="label-col">Materi Pelajaran</td><td colspan="2">${content.identifikasi.materiPelajaran}</td></tr>
+                        <tr><td class="label-col">Dimensi Profil Lulusan</td><td colspan="2">${content.identifikasi.dimensiProfilLulusan}</td></tr>
+
+                        <tr><td colspan="3" class="section-header">DESAIN PEMBELAJARAN</td></tr>
+                        <tr><td class="label-col">Capaian Pembelajaran</td><td colspan="2">${content.desainPembelajaran.capaianPembelajaran}</td></tr>
+                        <tr><td class="label-col">Tujuan Pembelajaran</td><td colspan="2">${list(content.desainPembelajaran.tujuanPembelajaran)}</td></tr>
+                        <tr><td class="label-col">Topik Pembelajaran</td><td colspan="2">${content.desainPembelajaran.topikPembelajaran}</td></tr>
+                        <tr><td class="label-col">Praktik Pedagogis</td><td colspan="2">${content.desainPembelajaran.praktikPedagogis}</td></tr>
+                        <tr><td class="label-col">Kemitraan</td><td colspan="2">${content.desainPembelajaran.kemitraanPembelajaran}</td></tr>
+                        <tr><td class="label-col">Lingkungan</td><td colspan="2">${content.desainPembelajaran.lingkunganPembelajaran}</td></tr>
+                        <tr><td class="label-col">Digital</td><td colspan="2">${content.desainPembelajaran.pemanfaatanDigital}</td></tr>
+
+                        <tr><td colspan="3" class="section-header">PENGALAMAN BELAJAR</td></tr>
+                        <tr>
+                            <td class="label-col-tahap">AWAL (${content.pengalamanBelajar.awal.alokasi})</td>
+                            <td class="label-col-prinsip">Prinsip: ${content.pengalamanBelajar.awal.prinsip}</td>
+                            <td>${list(content.pengalamanBelajar.awal.kegiatan)}</td>
+                        </tr>
+                        ${intiRows(content.pengalamanBelajar.inti.tahapan)}
+                        <tr>
+                            <td class="label-col-tahap">PENUTUP (${content.pengalamanBelajar.penutup.alokasi})</td>
+                            <td class="label-col-prinsip">Prinsip: ${content.pengalamanBelajar.penutup.prinsip}</td>
+                            <td>${list(content.pengalamanBelajar.penutup.kegiatan)}</td>
+                        </tr>
+
+                        <tr><td colspan="3" class="section-header">ASESMEN</td></tr>
+                        <tr><td class="label-col">Awal</td><td colspan="2"><p>${content.asesmenPembelajaran.awal.deskripsi}</p>${tableAsesmen(content.asesmenPembelajaran.awal.rubrik)}</td></tr>
+                        <tr><td class="label-col">Proses</td><td colspan="2"><p>${content.asesmenPembelajaran.proses.deskripsi}</p>${tableAsesmen(content.asesmenPembelajaran.proses.rubrik)}</td></tr>
+                        <tr><td class="label-col">Akhir</td><td colspan="2">${content.asesmenPembelajaran.akhir}</td></tr>
+                    </table>
+
+                     <div class="signature-block-wrapper text-sm">
+                        <div class="signature-date">${data.kota_ttd}</div>
+                        <table class="signature-block">
+                            <tr>
+                                <td class="col-left"><div class="signature-title">Mengetahui Kepala Sekolah</div></td>
+                                <td class="col-spacer"></td>
+                                <td class="col-right"><div class="signature-title">Guru Mata Pelajaran</div></td>
+                            </tr>
+                            <tr class="signature-space"><td><br><br><br></td><td></td><td><br><br><br></td></tr>
+                            <tr>
+                                <td class="col-left">
+                                    <div class="signature-name">${data.kepala_sekolah}</div>
+                                    <div class="signature-nip">NIP. ${data.nip_kepsek}</div>
+                                </td>
+                                <td class="col-spacer"></td>
+                                <td class="col-right">
+                                    <div class="signature-name">${data.pendidik}</div>
+                                    <div class="signature-nip">NIP. ${data.nip_pendidik}</div>
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
